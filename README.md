@@ -1,3 +1,8 @@
+To run:
 
-export GITHUB_TOKEN="your_github_token_here"
+copy `env.sample` to `.env` and add your github token
+
+run:
+```
 python github_repos_csv.py
+```

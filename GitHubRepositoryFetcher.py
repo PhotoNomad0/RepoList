@@ -9,7 +9,11 @@ import urllib.parse
 import urllib.request
 
 
-ORG_NAME = "unfoldingWord"
+ORG_NAME = [
+    "unfoldingWord",
+    "unfoldingWord-dev",
+    "unfoldingWord-box3",
+]
 OUTPUT_FILE = "unfoldingword_repos.csv"
 GITHUB_API_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
 ENV_FILE = ".env"
@@ -66,7 +70,7 @@ def github_request(url):
                 print("GitHub API returned 403 Forbidden.", file=sys.stderr)
 
         elif error.code == 404:
-            print(f"Organization not found: {ORG_NAME}", file=sys.stderr)
+            print("Organization not found.", file=sys.stderr)
 
         else:
             print(f"GitHub API error: {error.code} {error.reason}", file=sys.stderr)
@@ -94,7 +98,7 @@ def get_next_page_url(link_header):
     return None
 
 
-def fetch_repositories():
+def fetch_repositories_for_org(org_name):
     repos = []
 
     query_params = urllib.parse.urlencode({
@@ -104,7 +108,8 @@ def fetch_repositories():
         "direction": "desc",
     })
 
-    url = f"{GITHUB_API_URL}?{query_params}"
+    github_api_url = f"https://api.github.com/orgs/{org_name}/repos"
+    url = f"{github_api_url}?{query_params}"
 
     while url:
         print(f"Fetching: {url}")
@@ -121,12 +126,23 @@ def fetch_repositories():
     return repos
 
 
+def fetch_repositories():
+    repos = []
+
+    for org_name in ORG_NAME:
+        repos.extend(fetch_repositories_for_org(org_name))
+
+    return repos
+
+
 def write_csv(repos, output_file):
     with open(output_file, mode="w", newline="", encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file)
 
         writer.writerow([
             "repo name",
+            "language",
+            "organization name",
             "repo url",
             "last edit date",
         ])
@@ -134,6 +150,8 @@ def write_csv(repos, output_file):
         for repo in repos:
             writer.writerow([
                 repo.get("name", ""),
+                repo.get("language") or "",
+                repo.get("owner", {}).get("login", ""),
                 repo.get("html_url", ""),
                 repo.get("updated_at", ""),
             ])
