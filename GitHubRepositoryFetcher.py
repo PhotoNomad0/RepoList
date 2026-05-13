@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import base64
+import datetime
 import json
 import os
 import sys
@@ -19,6 +20,22 @@ ORG_NAME = [
 OUTPUT_FILE = "unfoldingword_repos.ods"
 GITHUB_API_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
 ENV_FILE = ".env"
+
+
+def urlopen_with_retry(request, retries=1, retry_delay_seconds=5):
+    for attempt in range(retries + 1):
+        try:
+            return urllib.request.urlopen(request)
+        except urllib.error.HTTPError as error:
+            if error.code == 429 and attempt < retries:
+                print(
+                    f"Received 429 Too Many Requests. Retrying in {retry_delay_seconds} second...",
+                    file=sys.stderr,
+                )
+                time.sleep(retry_delay_seconds)
+                continue
+
+            raise
 
 
 def load_env_file(env_file):
@@ -54,7 +71,7 @@ def github_request(url, allow_not_found=False):
     request = urllib.request.Request(url, headers=headers)
 
     try:
-        with urllib.request.urlopen(request) as response:
+        with urlopen_with_retry(request) as response:
             data = response.read()
             link_header = response.headers.get("Link")
             return data, link_header
@@ -154,7 +171,7 @@ def fetch_npmjs_package_metadata(package_name):
     )
 
     try:
-        with urllib.request.urlopen(request) as response:
+        with urlopen_with_retry(request) as response:
             return json.loads(response.read().decode("utf-8"))
 
     except urllib.error.HTTPError as error:
@@ -184,8 +201,142 @@ def fetch_npmjs_last_published(package_metadata):
         if version not in ("created", "modified")
     ]
 
+    time.sleep(0.25)
+    
     return max(published_dates, default="")
 
+
+def fetch_npmjs_download_count(package_name, period="last-month"):
+    if not package_name:
+        return ""
+
+    downloads_url = (
+        "https://api.npmjs.org/downloads/point/"
+        f"{urllib.parse.quote(period, safe='')}/"
+        f"{urllib.parse.quote(package_name, safe='@')}"
+    )
+
+    print(f"Fetching npm download count: {package_name}")
+
+    request = urllib.request.Request(
+        downloads_url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "unfoldingword-repo-list-script",
+        },
+    )
+
+    try:
+        with urlopen_with_retry(request) as response:
+            download_data = json.loads(response.read().decode("utf-8"))
+            return download_data.get("downloads", "")
+
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return ""
+
+        print(
+            f"npm downloads API error for {package_name}: {error.code} {error.reason}",
+            file=sys.stderr,
+        )
+        return ""
+
+
+def fetch_npmjs_download_count(package_name, period="last-month"):
+    if not package_name:
+        return ""
+
+    downloads_url = (
+        "https://api.npmjs.org/downloads/point/"
+        f"{urllib.parse.quote(period, safe='')}/"
+        f"{urllib.parse.quote(package_name, safe='@')}"
+    )
+
+    print(f"Fetching npm download count: {package_name}")
+
+    request = urllib.request.Request(
+        downloads_url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "unfoldingword-repo-list-script",
+        },
+    )
+
+    try:
+        with urlopen_with_retry(request) as response:
+            download_data = json.loads(response.read().decode("utf-8"))
+            return download_data.get("downloads", "")
+
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return ""
+
+        print(
+            f"npm downloads API error for {package_name}: {error.code} {error.reason}",
+            file=sys.stderr,
+        )
+        return ""
+
+
+def fetch_npmjs_total_download_count(package_name, package_metadata):
+    if not package_name or package_metadata is None:
+        return ""
+
+    created_at = (package_metadata.get("time") or {}).get("created")
+    if not created_at:
+        return ""
+
+    try:
+        start_date = datetime.date.fromisoformat(created_at[:10])
+    except ValueError:
+        return ""
+
+    end_date = datetime.date.today()
+    total_downloads = 0
+    current_start = start_date
+
+    print(f"Fetching total npm download count: {package_name}")
+
+    while current_start <= end_date:
+        current_end = min(
+            current_start + datetime.timedelta(days=364),
+            end_date,
+            )
+
+        period = f"{current_start.isoformat()}:{current_end.isoformat()}"
+        downloads_url = (
+            "https://api.npmjs.org/downloads/range/"
+            f"{urllib.parse.quote(period, safe=':')}/"
+            f"{urllib.parse.quote(package_name, safe='@')}"
+        )
+
+        request = urllib.request.Request(
+            downloads_url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "unfoldingword-repo-list-script",
+            },
+        )
+
+        try:
+            with urlopen_with_retry(request) as response:
+                download_data = json.loads(response.read().decode("utf-8"))
+                daily_downloads = sum(day.get("downloads", 0) for day in download_data.get("downloads", []))
+                total_downloads += daily_downloads
+
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                return ""
+
+            print(
+                f"npm downloads API error for {package_name}: {error.code} {error.reason}",
+                file=sys.stderr,
+            )
+            return ""
+
+        current_start = current_end + datetime.timedelta(days=1)
+
+    return total_downloads
 
 def fetch_repositories_for_org(org_name):
     """
@@ -236,6 +387,15 @@ def fetch_repositories_for_org(org_name):
                     repo["npmjs_package_name"] = npm_package_name
                     npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
                     repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
+                    # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
+                    repo["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
+                        npm_package_name,
+                        "last-year",
+                    )
+                    # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
+                    #     npm_package_name,
+                    #     npm_package_metadata,
+                    # )
 
                 repo["npmjs_used_by"] = []
                 repo["npmjs_uses"] = []
@@ -310,12 +470,15 @@ def update_npmjs_dependencies(repos):
             if dependency_name not in npmjs_uses:
                 npmjs_uses.append(dependency_name)
 
+
 def write_ods(repos, output_file):
     headers = [
         "repo name",
         "organization name",
         "language",
         "npmjs package name",
+        "npmjs downloads last year",
+        "npmjs last published",
         "npmjs used by",
         "npmjs uses",
         "repo url",
@@ -331,6 +494,8 @@ def write_ods(repos, output_file):
                 repo.get("owner", {}).get("login", ""),
                 repo.get("language") or "",
                 repo.get("npmjs_package_name", ""),
+                repo.get("npmjs_downloads_last_year", ""),
+                repo.get("npmjs_last_published", ""),
                 ", ".join(repo.get("npmjs_used_by", [])),
                 ", ".join(repo.get("npmjs_uses", [])),
                 repo.get("html_url", ""),
