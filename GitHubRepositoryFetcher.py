@@ -5,12 +5,13 @@ import datetime
 import json
 import os
 import sys
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
 from xml.sax.saxutils import escape
+
+from utilities import load_env_file, urlopen_with_retry
 
 ORG_NAME = [
     "unfoldingWord",
@@ -20,41 +21,6 @@ ORG_NAME = [
 OUTPUT_FILE = "unfoldingword_repos.ods"
 GITHUB_API_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
 ENV_FILE = ".env"
-
-
-def urlopen_with_retry(request, retries=1, retry_delay_seconds=5):
-    for attempt in range(retries + 1):
-        try:
-            return urllib.request.urlopen(request)
-        except urllib.error.HTTPError as error:
-            if error.code == 429 and attempt < retries:
-                print(
-                    f"Received 429 Too Many Requests. Retrying in {retry_delay_seconds} second...",
-                    file=sys.stderr,
-                )
-                time.sleep(retry_delay_seconds)
-                continue
-
-            raise
-
-
-def load_env_file(env_file):
-    if not os.path.exists(env_file):
-        return
-
-    with open(env_file, mode="r", encoding="utf-8") as file:
-        for line in file:
-            line = line.strip()
-
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-
-            key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-
-            if key and key not in os.environ:
-                os.environ[key] = value
 
 
 def github_request(url, allow_not_found=False):
@@ -338,6 +304,7 @@ def fetch_npmjs_total_download_count(package_name, package_metadata):
 
     return total_downloads
 
+
 def fetch_repositories_for_org(org_name):
     """
     Fetches all repositories for a given GitHub organization.
@@ -577,7 +544,7 @@ def main():
     load_env_file(ENV_FILE)
 
     repos = fetch_repositories()
-    update_npmjs_dependencies(repos)
+    update_npmjs_dependencies(repos) # update repos with npmjs dependency info
     write_ods(repos, OUTPUT_FILE)
 
     print()

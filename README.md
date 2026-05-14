@@ -1,4 +1,10 @@
-To run:
+## T setup:
+
+```
+pip install pandas odfpy
+```
+
+## To run:
 
 copy `env.sample` to `.env` and add your github token
 
