@@ -404,6 +404,10 @@ def update_npmjs_dependencies(repos):
     Returns:
         None. The function modifies the repository dictionaries in place.
     """
+
+    # Create a dictionary mapping npm package names to their corresponding repository objects
+    # This allows O(1) lookup of repositories by their npm package name for efficient
+    # dependency relationship building. Only repositories with an npm package name are included.
     repos_by_npmjs_package_name = {
         repo.get("npmjs_package_name"): repo
         for repo in repos
@@ -497,6 +501,9 @@ def write_ods(repos, output_file):
             "</table:table>"
         )
 
+    # Filter the repositories to include only those written in JavaScript or TypeScript.
+    # This creates a subset of repos by checking if the 'language' field (case-insensitive)
+    # matches either 'javascript' or 'typescript'. Handles cases where language is None.
     js_ts_repos = [
         repo
         for repo in repos
