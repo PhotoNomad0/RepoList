@@ -133,6 +133,49 @@ def fetch_package_json(repo):
     return package_json
 
 
+def fetch_package_json_files(repo):
+    owner = repo.get("owner", {}).get("login")
+    repo_name = repo.get("name")
+    default_branch = repo.get("default_branch")
+
+    if not owner or not repo_name or not default_branch:
+        return []
+
+    tree_url = (
+        f"https://api.github.com/repos/"
+        f"{urllib.parse.quote(owner, safe='')}/"
+        f"{urllib.parse.quote(repo_name, safe='')}/"
+        f"git/trees/"
+        f"{urllib.parse.quote(default_branch, safe='')}?"
+        f"{urllib.parse.urlencode({'recursive': '1'})}"
+    )
+
+    print(f"Fetching recursive file tree: {owner}/{repo_name}@{default_branch}")
+
+    data, _ = github_request(tree_url, allow_not_found=True)
+    if data is None:
+        return []
+
+    tree_data = json.loads(data.decode("utf-8"))
+    package_files = []
+
+    for item in tree_data.get("tree", []):
+        if item.get("type") != "blob":
+            continue
+
+        path = item.get("path", "")
+
+        if path.endswith("package.json"):
+            package_files.append({
+                "path": path,
+                "url": (
+                    f"https://github.com/{owner}/{repo_name}/blob/"
+                    f"{urllib.parse.quote(default_branch, safe='')}/{path}"
+                ),
+            })
+
+    return package_files
+
 def fetch_nx_json(repo):
     return fetch_repository_json_file(repo, "nx.json")
 
@@ -391,6 +434,8 @@ def fetch_repositories_for_org(org_name):
                         if nx_json:
                             workspaces = True
                             
+                        if workspaces:
+                            repo["package_json_files"] = fetch_package_json_files(repo)
 
                 repo["npmjs_used_by"] = []
                 repo["npmjs_uses"] = []
