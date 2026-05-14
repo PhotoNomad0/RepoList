@@ -211,6 +211,25 @@ def fetch_npmjs_package_metadata(package_name):
         return None
 
 
+def npm_repo_is_from_uw(package_metadata):
+    if package_metadata is None:
+        return False
+
+    homepage = package_metadata.get("homepage") or ""
+    repository = package_metadata.get("repository") or {}
+
+    if isinstance(repository, dict):
+        repository_url = repository.get("url") or ""
+    else:
+        repository_url = str(repository) if repository else ""
+
+    homepage = homepage.lower()
+    repository_url = repository_url.lower()
+
+    in_uw_org = any(org_name.lower() in homepage or org_name.lower() in repository_url for org_name in ORG_NAME)
+    return in_uw_org
+
+
 def fetch_npmjs_last_published(package_metadata):
     if package_metadata is None:
         return ""
@@ -419,16 +438,22 @@ def fetch_repositories_for_org(org_name):
 
                     if primary_package_json.get("private") is not True:
                         npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
-                        repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
-                        # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
-                        repo["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
-                            npm_package_name,
-                            "last-year",
-                        )
-                        # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
-                        #     npm_package_name,
-                        #     npm_package_metadata,
-                        # )
+   
+                        if npm_repo_is_from_uw(npm_package_metadata):
+                            repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
+                            # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
+                            repo["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
+                                npm_package_name,
+                                "last-year",
+                            )
+                            # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
+                            #     npm_package_name,
+                            #     npm_package_metadata,
+                            # )
+                        else:
+                            print(
+                                f"npm_package_name: {npm_package_name}, Homepage: {npm_package_metadata.get('homepage', 'N/A') if npm_package_metadata else 'N/A'}")
+
 
                     workspaces = primary_package_json.get("workspaces", None)
                     if not workspaces:
