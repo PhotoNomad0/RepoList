@@ -15,9 +15,9 @@ from xml.sax.saxutils import escape
 from utilities import load_env_file, urlopen_with_retry
 
 ORG_NAME = [
+    "unfoldingWord-box3",
     "unfoldingWord",
     "unfoldingWord-dev",
-    "unfoldingWord-box3",
 ]
 OUTPUT_FILE = "unfoldingword_repos.ods"
 GITHUB_API_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
@@ -413,20 +413,22 @@ def fetch_repositories_for_org(org_name):
 
                 primary_package_json = package_jsons[0] if package_jsons else None
 
-                if primary_package_json and primary_package_json.get("private") is not True:
+                if primary_package_json:
                     npm_package_name = primary_package_json.get("name", "")
                     repo["npmjs_package_name"] = npm_package_name
-                    npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
-                    repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
-                    # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
-                    repo["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
-                        npm_package_name,
-                        "last-year",
-                    )
-                    # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
-                    #     npm_package_name,
-                    #     npm_package_metadata,
-                    # )
+
+                    if primary_package_json.get("private") is not True:
+                        npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
+                        repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
+                        # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
+                        repo["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
+                            npm_package_name,
+                            "last-year",
+                        )
+                        # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
+                        #     npm_package_name,
+                        #     npm_package_metadata,
+                        # )
 
                     workspaces = primary_package_json.get("workspaces", None)
                     if not workspaces:
@@ -434,8 +436,8 @@ def fetch_repositories_for_org(org_name):
                         if nx_json:
                             workspaces = True
                             
-                        if workspaces:
-                            repo["package_json_files"] = fetch_package_json_files(repo)
+                    if workspaces:
+                        repo["package_json_files"] = fetch_package_json_files(repo)
 
                 repo["npmjs_used_by"] = []
                 repo["npmjs_uses"] = []
