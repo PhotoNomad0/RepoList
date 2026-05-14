@@ -401,8 +401,7 @@ def fetch_repositories_for_org(org_name):
               - 'npmjs_package_name' (str): The npm package name from package.json
               - 'npmjs_used_by' (list): Initially empty, populated later by update_npmjs_dependencies
               - 'npmjs_uses' (list): Initially empty, populated later by update_npmjs_dependencies
-              - 'package_jsons' (list): A list containing parsed package.json content,
-                or an empty list if not available
+              - 'package_json' (dict): The parsed package.json content, or None if not available
     """
     repos = []
 
@@ -427,16 +426,13 @@ def fetch_repositories_for_org(org_name):
             language = (repo.get("language") or "").lower()
 
             if language in ("javascript", "typescript"):
-                package_json_ = fetch_package_json(repo)
-                package_jsons = [package_json_] if package_json_ else []
+                package_json = fetch_package_json(repo)
 
-                primary_package_json = package_jsons[0] if package_jsons else None
-
-                if primary_package_json:
-                    npm_package_name = primary_package_json.get("name", "")
+                if package_json:
+                    npm_package_name = package_json.get("name", "")
                     repo["npmjs_package_name"] = npm_package_name
 
-                    if primary_package_json.get("private") is not True:
+                    if package_json.get("private") is not True:
                         npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
    
                         if npm_repo_is_from_uw(npm_package_metadata):
@@ -455,7 +451,7 @@ def fetch_repositories_for_org(org_name):
                                 f"npm_package_name: {npm_package_name}, Homepage: {npm_package_metadata.get('homepage', 'N/A') if npm_package_metadata else 'N/A'}")
 
 
-                    workspaces = primary_package_json.get("workspaces", None)
+                    workspaces = package_json.get("workspaces", None)
                     if not workspaces:
                         nx_json = fetch_nx_json(repo)
                         if nx_json:
@@ -466,7 +462,7 @@ def fetch_repositories_for_org(org_name):
 
                 repo["npmjs_used_by"] = []
                 repo["npmjs_uses"] = []
-                repo["package_jsons"] = package_jsons
+                repo["package_json"] = package_json
 
         repos.extend(page_repos)
 
@@ -529,8 +525,7 @@ def update_npmjs_dependencies(repos):
     Args:
         repos (list): A list of repository dictionaries. Each repository should contain:
             - 'npmjs_package_name' (str, optional): The npm package name
-           - 'package_jsons' (list, optional): Parsed package.json contents with
-               'dependencies' and/or 'peerDependencies' fields
+            - 'package_json' (dict): The parsed package.json content, or None if not available
             - 'npmjs_used_by' (list): Will be populated with package names that depend on this package
             - 'npmjs_uses' (list): Will be populated with package names this package depends on
 
@@ -553,8 +548,6 @@ def update_npmjs_dependencies(repos):
     for repo in repos:
         package_json_files = repo.get("package_json_files")
         if package_json_files:
-            package_jsons = repo.setdefault("package_jsons", [])
-
             for package_json_file in package_json_files:
                 package_json_path = package_json_file.get("path")
                 if not package_json_path or (package_json_path == "package.json"):
@@ -565,8 +558,32 @@ def update_npmjs_dependencies(repos):
                     sub_module = repo.copy()
                     new_name = f"{repo.get('name', '')}/{package_json.get('name', '')}"
                     sub_module["name"] = new_name
+                    sub_module["npmjs_used_by"] = []
+                    sub_module["npmjs_uses"] = []
+                    
+                    npm_package_name = package_json.get("name", "")
+                    sub_module["npmjs_package_name"] = npm_package_name
+
+                    if package_json.get("private") is not True:
+                        npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
+
+                        if npm_repo_is_from_uw(npm_package_metadata):
+                            sub_module["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
+                            # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
+                            sub_module["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
+                                npm_package_name,
+                                "last-year",
+                            )
+                            # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
+                            #     npm_package_name,
+                            #     npm_package_metadata,
+                            # )
+                        else:
+                            print(
+                                f"npm_package_name: {npm_package_name}, Homepage: {npm_package_metadata.get('homepage', 'N/A') if npm_package_metadata else 'N/A'}")
+
                     sub_module["package_json"] = package_json
-                    sub_modules.append(package_json)
+                    sub_modules.append(sub_module)
 
     repos.extend(sub_modules)
     
