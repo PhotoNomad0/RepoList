@@ -7,6 +7,7 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 def read_ods_sheets(input_file):
@@ -198,10 +199,29 @@ def fetch_repository_contributors(repo):
         print(f"Fetching contributors: {owner}/{repo_name}")
 
         data, link_header = github_request(next_url, allow_not_found=True)
-        if data is None:
+        if not data:
             break
 
-        page_contributors = json.loads(data.decode("utf-8"))
+        decoded_data = data.decode("utf-8").strip()
+        if not decoded_data:
+            break
+
+        try:
+            page_contributors = json.loads(decoded_data)
+        except json.JSONDecodeError as error:
+            print(
+                f"Could not parse contributors response for {owner}/{repo_name}: {error}",
+                file=sys.stderr,
+            )
+            break
+
+        if not isinstance(page_contributors, list):
+            message = page_contributors.get("message", "Unexpected contributors response")
+            print(
+                f"Could not fetch contributors for {owner}/{repo_name}: {message}",
+                file=sys.stderr,
+            )
+            break
 
         for contributor in page_contributors:
             contributor_name = (
