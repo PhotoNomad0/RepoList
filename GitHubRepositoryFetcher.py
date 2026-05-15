@@ -7,7 +7,7 @@ import urllib.request
 import zipfile
 from xml.sax.saxutils import escape
 
-from utilities import load_env_file, github_request, fetch_repository_dependents, \
+from lib.utilities import load_env_file, github_request, fetch_repository_dependents, \
     fetch_repository_contributors, \
     fetch_package_json, fetch_npmjs_package_metadata, npm_repo_is_from_uw, fetch_npmjs_last_published, \
     fetch_npmjs_download_count, fetch_nx_json, fetch_package_json_files, get_next_page_url, fetch_repository_json_file

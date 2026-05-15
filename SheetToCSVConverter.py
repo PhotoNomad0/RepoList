@@ -1,6 +1,6 @@
 import os
 
-from utilities import read_ods_sheets, safe_filename
+from lib.utilities import read_ods_sheets, safe_filename
 
 INPUT_FILE = "unfoldingword_repos.ods"
 OUTPUT_DIR = "."
