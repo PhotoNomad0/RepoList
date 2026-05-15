@@ -98,13 +98,13 @@ def github_request(url, allow_not_found=False):
                     file=sys.stderr,
                 )
             else:
-                print("GitHub API returned 403 Forbidden.", file=sys.stderr)
+                print(f"GitHub API returned 403 Forbidden. (URL: {url})", file=sys.stderr)
 
         elif error.code == 404:
-            print("Organization not found.", file=sys.stderr)
+            print(f"Organization not found. (URL: {url})", file=sys.stderr)
 
         else:
-            print(f"GitHub API error: {error.code} {error.reason}", file=sys.stderr)
+            print(f"GitHub API error: {error.code} {error.reason} (URL: {url})", file=sys.stderr)
 
         raise
 
@@ -137,7 +137,7 @@ def github_html_request(url, allow_not_found=False):
 
     except urllib.error.URLError as error:
         print(
-            f"GitHub HTML request failed: {error.reason}",
+            f"GitHub HTML request failed: {error.reason} (URL: {url})",
             file=sys.stderr,
         )
         return None
