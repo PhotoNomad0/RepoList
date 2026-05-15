@@ -4,6 +4,7 @@ import base64
 import datetime
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -65,6 +66,76 @@ def github_request(url, allow_not_found=False):
             print(f"GitHub API error: {error.code} {error.reason}", file=sys.stderr)
 
         raise
+
+
+def github_html_request(url, allow_not_found=False):
+    headers = {
+        "Accept": "text/html",
+        "User-Agent": "unfoldingword-repo-list-script",
+    }
+
+    github_token = os.getenv("GITHUB_TOKEN")
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
+    request = urllib.request.Request(url, headers=headers)
+
+    try:
+        with urlopen_with_retry(request) as response:
+            return response.read().decode("utf-8")
+
+    except urllib.error.HTTPError as error:
+        if error.code == 404 and allow_not_found:
+            return None
+
+        print(
+            f"GitHub HTML request error: {error.code} {error.reason}",
+            file=sys.stderr,
+        )
+        return None
+
+
+def fetch_repository_dependents(repo):
+    owner = repo.get("owner", {}).get("login")
+    repo_name = repo.get("name")
+
+    if not owner or not repo_name:
+        return []
+
+    dependents = []
+    seen_dependents = set()
+    next_url = (
+        f"https://github.com/{urllib.parse.quote(owner, safe='')}/"
+        f"{urllib.parse.quote(repo_name, safe='')}/network/dependents?"
+        f"{urllib.parse.urlencode({'dependent_type': 'REPOSITORY'})}"
+    )
+
+    while next_url:
+        print(f"Fetching dependents: {owner}/{repo_name}")
+
+        html = github_html_request(next_url, allow_not_found=True)
+        if not html:
+            break
+
+        repo_links = re.findall(r'href="/([^"/]+/[^"/]+)"', html)
+
+        for dependent in repo_links:
+            if dependent == f"{owner}/{repo_name}":
+                continue
+
+            if dependent in seen_dependents:
+                continue
+
+            seen_dependents.add(dependent)
+            dependents.append(dependent)
+
+        next_match = re.search(r'href="([^"]+)"[^>]*>\s*Next\s*</a>', html)
+        if not next_match:
+            break
+
+        next_url = urllib.parse.urljoin("https://github.com", next_match.group(1))
+
+    return dependents
 
 
 def get_next_page_url(link_header):
@@ -387,14 +458,14 @@ def fetch_npmjs_total_download_count(package_name, package_metadata):
 def fetch_repositories_for_org(org_name):
     """
     Fetches all repositories for a given GitHub organization.
-    
+
     This function retrieves all repositories from a specified GitHub organization using
     the GitHub API. It handles pagination to fetch all repositories, and for JavaScript/
     TypeScript repositories, it attempts to fetch and parse their package.json files.
-    
+
     Args:
         org_name (str): The name of the GitHub organization to fetch repositories from.
-    
+
     Returns:
         list: A list of repository dictionaries. Each repository contains standard GitHub
               API fields, and for JavaScript/TypeScript repositories, additional fields:
@@ -423,6 +494,8 @@ def fetch_repositories_for_org(org_name):
         page_repos = json.loads(data.decode("utf-8"))
 
         for repo in page_repos:
+            repo["github_dependents"] = fetch_repository_dependents(repo)
+
             language = (repo.get("language") or "").lower()
 
             if language in ("javascript", "typescript"):
@@ -434,7 +507,7 @@ def fetch_repositories_for_org(org_name):
 
                     if package_json.get("private") is not True:
                         npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
-   
+
                         if npm_repo_is_from_uw(npm_package_metadata):
                             repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
                             # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
@@ -456,7 +529,7 @@ def fetch_repositories_for_org(org_name):
                         nx_json = fetch_nx_json(repo)
                         if nx_json:
                             workspaces = True
-                            
+
                     if workspaces:
                         repo["package_json_files"] = fetch_package_json_files(repo)
 
@@ -600,6 +673,7 @@ def write_ods(repos, output_file):
         "npmjs last published",
         "npmjs used by",
         "npmjs uses",
+        "github dependents",
         "repo url",
         "last edit date",
     ]
@@ -617,6 +691,7 @@ def write_ods(repos, output_file):
                 repo.get("npmjs_last_published", ""),
                 ", ".join(repo.get("npmjs_used_by", [])),
                 ", ".join(repo.get("npmjs_uses", [])),
+                ", ".join(repo.get("github_dependents", [])),
                 repo.get("html_url", ""),
                 repo.get("updated_at", ""),
             ])
