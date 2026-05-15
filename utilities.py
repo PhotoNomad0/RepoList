@@ -135,6 +135,13 @@ def github_html_request(url, allow_not_found=False):
         )
         return None
 
+    except urllib.error.URLError as error:
+        print(
+            f"GitHub HTML request failed: {error.reason}",
+            file=sys.stderr,
+        )
+        return None
+    
 
 def fetch_repository_dependents(repo):
     owner = repo.get("owner", {}).get("login")
