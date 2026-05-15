@@ -10,7 +10,8 @@ from xml.sax.saxutils import escape
 from lib.utilities import load_env_file, github_request, fetch_repository_dependents, \
     fetch_repository_contributors, \
     fetch_package_json, fetch_npmjs_package_metadata, npm_repo_is_from_uw, fetch_npmjs_last_published, \
-    fetch_npmjs_download_count, fetch_nx_json, fetch_package_json_files, get_next_page_url, fetch_repository_json_file
+    fetch_npmjs_download_count, fetch_nx_json, fetch_package_json_files, get_next_page_url, fetch_repository_json_file, \
+    fetch_repository_last_commit_date, fetch_repository_last_release_date, fetch_repository_open_prs_count
 
 ORG_NAME = [
     "unfoldingWord-box3",
@@ -20,7 +21,6 @@ ORG_NAME = [
 OUTPUT_FILE = "unfoldingword_repos.ods"
 GITHUB_API_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
 ENV_FILE = ".env"
-
 
 
 def fetch_repositories_for_org(org_name):
