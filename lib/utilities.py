@@ -489,7 +489,7 @@ def fetch_npmjs_package_metadata(package_name):
         return None
 
 
-def npm_repo_is_from_uw(package_metadata, ORG_NAME):
+def npm_repo_is_from_uw(package_metadata, ORG_NAMES):
     if package_metadata is None:
         return False
 
@@ -504,7 +504,7 @@ def npm_repo_is_from_uw(package_metadata, ORG_NAME):
     homepage = homepage.lower()
     repository_url = repository_url.lower()
 
-    in_uw_org = any(org_name.lower() in homepage or org_name.lower() in repository_url for org_name in ORG_NAME)
+    in_uw_org = any(org_name.lower() in homepage or org_name.lower() in repository_url for org_name in ORG_NAMES)
     return in_uw_org
 
 

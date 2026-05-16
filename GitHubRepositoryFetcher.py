@@ -14,13 +14,12 @@ from lib.utilities import load_env_file, github_request, fetch_repository_depend
     fetch_repository_last_commit_date, fetch_repository_last_release_date, fetch_repository_open_prs_count, \
     fetch_npmjs_is_deprecated
 
-ORG_NAME = [
+ORG_NAMES = [
     "unfoldingWord-box3",
     "unfoldingWord",
     "unfoldingWord-dev",
 ]
 OUTPUT_FILE = "unfoldingword_repos.ods"
-GITHUB_API_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
 ENV_FILE = ".env"
 
 
@@ -81,7 +80,7 @@ def fetch_repositories_for_org(org_name):
                     if package_json.get("private") is not True:
                         npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
 
-                        if npm_repo_is_from_uw(npm_package_metadata, ORG_NAME):
+                        if npm_repo_is_from_uw(npm_package_metadata, ORG_NAMES):
                             repo["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
                             # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
                             repo["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
@@ -121,7 +120,7 @@ def fetch_repositories_for_org(org_name):
 def fetch_repositories():
     repos = []
 
-    for org_name in ORG_NAME:
+    for org_name in ORG_NAMES:
         repos.extend(fetch_repositories_for_org(org_name))
 
     return repos
@@ -214,7 +213,7 @@ def update_npmjs_dependencies(repos):
                     if package_json.get("private") is not True:
                         npm_package_metadata = fetch_npmjs_package_metadata(npm_package_name)
 
-                        if npm_repo_is_from_uw(npm_package_metadata, ORG_NAME):
+                        if npm_repo_is_from_uw(npm_package_metadata, ORG_NAMES):
                             sub_module["npmjs_last_published"] = fetch_npmjs_last_published(npm_package_metadata)
                             # repo["npmjs_downloads_last_month"] = fetch_npmjs_download_count(npm_package_name)
                             sub_module["npmjs_downloads_last_year"] = fetch_npmjs_download_count(
