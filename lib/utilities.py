@@ -66,7 +66,7 @@ def load_env_file(env_file):
             if key and key not in os.environ:
                 os.environ[key] = value
 
-def github_request(url, allow_not_found=False):
+def github_request(url, allow_not_found=False, allow_conflict=False):
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "unfoldingword-repo-list-script",
@@ -87,6 +87,9 @@ def github_request(url, allow_not_found=False):
 
     except urllib.error.HTTPError as error:
         if error.code == 404 and allow_not_found:
+            return None, None
+
+        if error.code == 409 and allow_conflict:
             return None, None
 
         if error.code == 403:
@@ -275,7 +278,7 @@ def fetch_repository_last_commit_date(repo):
 
     print(f"Fetching latest commit: {owner}/{repo_name}")
 
-    data, _ = github_request(commits_url, allow_not_found=True)
+    data, _ = github_request(commits_url, allow_not_found=True, allow_conflict=True)
     if not data:
         return ""
 
