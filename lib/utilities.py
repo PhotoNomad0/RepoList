@@ -529,6 +529,19 @@ def fetch_npmjs_last_published(package_metadata):
     return max(published_dates, default="")
 
 
+def fetch_npmjs_is_deprecated(package_metadata):
+    if package_metadata is None:
+        return ""
+
+    latest_version = package_metadata.get("dist-tags", {}).get("latest")
+    versions = package_metadata.get("versions") or {}
+
+    if latest_version and latest_version in versions:
+        return bool(versions[latest_version].get("deprecated"))
+
+    return bool(package_metadata.get("deprecated"))
+
+
 def fetch_npmjs_download_count(package_name, period="last-month"):
     if not package_name:
         return ""

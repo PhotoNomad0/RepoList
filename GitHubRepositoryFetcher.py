@@ -11,7 +11,8 @@ from lib.utilities import load_env_file, github_request, fetch_repository_depend
     fetch_repository_contributors, \
     fetch_package_json, fetch_npmjs_package_metadata, npm_repo_is_from_uw, fetch_npmjs_last_published, \
     fetch_npmjs_download_count, fetch_nx_json, fetch_package_json_files, get_next_page_url, fetch_repository_json_file, \
-    fetch_repository_last_commit_date, fetch_repository_last_release_date, fetch_repository_open_prs_count
+    fetch_repository_last_commit_date, fetch_repository_last_release_date, fetch_repository_open_prs_count, \
+    fetch_npmjs_is_deprecated
 
 ORG_NAME = [
     "unfoldingWord-box3",
@@ -87,6 +88,7 @@ def fetch_repositories_for_org(org_name):
                                 npm_package_name,
                                 "last-year",
                             )
+                            repo["npm_is_deprecated"] = fetch_npmjs_is_deprecated(npm_package_metadata)
                             # repo["npmjs_downloads_total"] = fetch_npmjs_total_download_count(
                             #     npm_package_name,
                             #     npm_package_metadata,
@@ -249,6 +251,7 @@ def write_ods(repos, output_file):
         "open issues count",
         "open prs count",
         "npmjs package name",
+        "npm is deprecated",
         "npmjs downloads last year",
         "npmjs last published",
         "npmjs used by",
@@ -275,6 +278,7 @@ def write_ods(repos, output_file):
                 repo.get("open_issues_count", ""),
                 repo.get("open_prs_count", ""),
                 repo.get("npmjs_package_name", ""),
+                repo.get("npm_is_deprecated", ""),
                 repo.get("npmjs_downloads_last_year", ""),
                 repo.get("npmjs_last_published", ""),
                 ", ".join(repo.get("npmjs_used_by", [])),
