@@ -23,6 +23,41 @@ def read_ods_sheets(input_file):
         engine="odf"
     )
 
+
+def write_ods_sheets(output_file, sheets):
+    """
+    Write one or more sheets to an ODS file.
+
+    Args:
+        output_file (str): Path to the ODS file to write.
+        sheets (dict[str, pandas.DataFrame] | pandas.DataFrame): Sheet data to write.
+            If a single DataFrame is provided, it is written to a sheet named "Sheet1".
+    """
+    if isinstance(sheets, pd.DataFrame):
+        sheets = {"Sheet1": sheets}
+
+    with pd.ExcelWriter(output_file, engine="odf") as writer:
+        for sheet_name, dataframe in sheets.items():
+            dataframe.to_excel(
+                writer,
+                sheet_name=str(sheet_name)[:31],
+                index=False,
+            )
+
+
+def write_rows_to_ods(output_file, sheet_name, rows):
+    """
+    Write a list of dictionaries to a single-sheet ODS file.
+
+    Args:
+        output_file (str): Path to the ODS file to write.
+        sheet_name (str): Name of the sheet.
+        rows (list[dict]): Rows to write.
+    """
+    dataframe = pd.DataFrame(rows)
+    write_ods_sheets(output_file, {sheet_name: dataframe})
+
+
 def safe_filename(name):
     """
     Convert a sheet name into a safe filename.
