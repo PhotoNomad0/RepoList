@@ -321,31 +321,31 @@ def determine_classification(row):
     recently_active = last_commit_months is not None and last_commit_months <= 12
 
     if recently_active:
-        return "Active"
+        return "Active", f"Last commit was within the last 12 months ({last_commit_months} months ago)."
 
     if has_local_use:
-        return "Keep - locally used"
+        return "Keep - locally used", "Repository is listed as used by an npm package."
 
     if has_github_dependents or npm_downloads_last_year >= 1000:
-        return "Keep - externally used"
+        return "Keep - externally used", f"Repository has GitHub dependents or at least 1,000 npm downloads in the last year ({npm_downloads_last_year} downloads)."
 
     if contains_any(repo_name, core_terms):
-        return "Manual review"
+        return "Manual review", "Repository name contains a core project term."
 
     if archived:
-        return "Dead - archived"
+        return "Dead - archived", "Repository is archived."
 
     if npm_deprecated and last_commit_months is not None and last_commit_months > 24:
-        return "Dead - deprecated"
+        return "Dead - deprecated", f"Npm package is deprecated and the last commit is older than 24 months ({last_commit_months} months ago)."
 
     if open_issues_count >= 50:
-        return "Manual review"
+        return "Manual review", f"Repository has at least 50 open issues ({open_issues_count} open issues)."
 
     if github_release_count >= 10 or github_downloads >= 100:
-        return "Manual review"
+        return "Manual review", f"Repository has significant release history or GitHub downloads ({github_release_count} releases, {github_downloads} downloads)."
 
     if github_contributors >= 5:
-        return "Manual review"
+        return "Manual review", f"Repository has at least 5 GitHub contributors ({github_contributors} contributors)."
 
     if (
         last_edit_months is not None
@@ -353,7 +353,7 @@ def determine_classification(row):
         and last_commit_months is not None
         and last_commit_months > 36
     ):
-        return "Manual review"
+        return "Manual review", f"Repository was edited recently ({last_edit_months} months ago) but has not had a commit in over 36 months ({last_commit_months} months ago)."
 
     if (
         last_commit_months is not None
@@ -364,7 +364,7 @@ def determine_classification(row):
         and github_downloads == 0
         and github_release_count == 0
     ):
-        return "Dead candidate"
+        return "Dead candidate", f"Repository has had no commits in over 60 months ({last_commit_months} months ago) and has no usage, downloads ({github_downloads}), or releases ({github_release_count})."
 
     if (
         is_fork
@@ -374,7 +374,7 @@ def determine_classification(row):
         and github_dependents_empty
         and github_downloads == 0
     ):
-        return "Dead candidate"
+        return "Dead candidate", f"Repository is an old fork with no detected usage or downloads ({github_downloads} downloads), and the last commit was over 36 months ago ({last_commit_months} months ago)."
 
     if (
         contains_any(repo_name, cleanup_terms)
@@ -383,7 +383,7 @@ def determine_classification(row):
         and npm_used_by_empty
         and github_dependents_empty
     ):
-        return "Dead candidate"
+        return "Dead candidate", f"Repository name suggests cleanup/test/demo content, it has no detected usage, and the last commit was over 24 months ago ({last_commit_months} months ago)."
 
     if (
         language_empty
@@ -393,7 +393,7 @@ def determine_classification(row):
         and last_commit_months is not None
         and last_commit_months > 36
     ):
-        return "Dead candidate"
+        return "Dead candidate", f"Repository has no language, releases ({github_release_count}), downloads ({github_downloads}), or npm package, and is older than 36 months ({last_commit_months} months since last commit)."
 
     if (
         last_commit_months is not None
@@ -404,7 +404,7 @@ def determine_classification(row):
             or npm_downloads_last_year > 0
         )
     ):
-        return "Stale but used"
+        return "Stale but used", f"Repository has had no commits in over 18 months ({last_commit_months} months ago) but still has detected usage ({npm_downloads_last_year} npm downloads in the last year)."
 
     if (
         not npm_package_empty
@@ -412,14 +412,14 @@ def determine_classification(row):
         and npm_last_published_months > 18
         and not npm_deprecated
     ):
-        return "Stale package"
+        return "Stale package", f"Npm package has not been published in over 18 months ({npm_last_published_months} months ago) and is not marked deprecated."
 
     if (
         last_commit_months is not None
         and last_commit_months > 12
         and (open_prs_count >= 5 or open_issues_count >= 20)
     ):
-        return "Stale / neglected"
+        return "Stale / neglected", f"Repository has had no commits in over 12 months ({last_commit_months} months ago) and has many open PRs or issues ({open_prs_count} PRs, {open_issues_count} issues)."
 
     if (
         last_commit_months is not None
@@ -428,27 +428,27 @@ def determine_classification(row):
         and last_release_months > 24
         and github_release_count > 0
     ):
-        return "Stale release process"
+        return "Stale release process", f"Repository has recent commits ({last_commit_months} months ago) but no release in over 24 months ({last_release_months} months ago), with {github_release_count} releases."
 
     if (
         last_commit_months is not None
         and last_commit_months > 18
         and not archived
     ):
-        return "Stale"
+        return "Stale", f"Repository has had no commits in over 18 months ({last_commit_months} months ago) and is not archived."
 
     if contains_any(repo_name, replacement_terms):
-        return "No longer used candidate"
+        return "No longer used candidate", "Repository name suggests it may be old, legacy, deprecated, obsolete, archived, or a backup."
 
     if (
         contains_any(repo_name, cleanup_terms)
         and last_commit_months is not None
         and last_commit_months > 12
     ):
-        return "No longer used candidate"
+        return "No longer used candidate", f"Repository name suggests cleanup/test/demo content and it has had no commits in over 12 months ({last_commit_months} months ago)."
 
     if is_fork and npm_used_by_empty and github_dependents_empty:
-        return "No longer used candidate"
+        return "No longer used candidate", "Repository is a fork with no detected npm or GitHub dependent usage."
 
     if (
         not npm_package_empty
@@ -456,9 +456,9 @@ def determine_classification(row):
         and github_dependents_empty
         and npm_downloads_last_year == 0
     ):
-        return "No longer used candidate"
+        return "No longer used candidate", f"Repository has an npm package but no detected usage or downloads in the last year ({npm_downloads_last_year} npm downloads)."
 
-    return "Needs review"
+    return "Needs review", "Repository did not match any automatic classification rule."
 
 
 def main():
@@ -467,9 +467,14 @@ def main():
     if "classification" not in headers:
         headers.append("classification")
 
+    if "classification reason" not in headers:
+        headers.append("classification reason")
+
     for row in data_rows:
         print(row)
-        row["classification"] = determine_classification(row)
+        classification, classification_reason = determine_classification(row)
+        row["classification"] = classification
+        row["classification reason"] = classification_reason
 
     # data_rows = [
     #     row for row in data_rows
@@ -490,7 +495,7 @@ def main():
     for classification in classifications:
         print(f"- {classification}")
 
-    # write_list_to_csv(CATEGORIZED_OUTPUT_CSV, headers, data_rows)
+    write_list_to_csv(CATEGORIZED_OUTPUT_CSV, headers, data_rows)
     write_rows_to_ods("categorized_repos.ods", "Repositories", data_rows)
 
 
