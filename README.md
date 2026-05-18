@@ -1,6 +1,8 @@
 # GitHub Repository Spreadsheet Tools
 
-Utilities for generating an OpenDocument spreadsheet of GitHub repository data and exporting spreadsheet sheets to CSV files.
+Python scripts for collecting GitHub repository data (and associated npm data) on a set of organizations and for classifying the repositories based on usage and activity.  The goals is to help determine repositories that are no longer being used and may be archived and well as the npm releases that can be deprecated.
+
+The goal is to codify the process of collecting and classifying GitHub repositories.  This way we have deterministic and auditable results rather than just trusting AI to do the right thing.
 
 ## Prerequisites
 

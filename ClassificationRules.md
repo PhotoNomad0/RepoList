@@ -31,6 +31,170 @@ Good columns to use:
 
 # Recommended rules
 
+## 0. npmjs module lifecycle classifications
+
+Published npm modules should be classified separately from their backing GitHub repositories. A repository may be stale or archived while its npm package is still installed by downstream users. Conversely, a package may remain published on npmjs even though it is obsolete, superseded, or unsafe to continue using.
+
+Prefer **deprecating** npm packages over unpublishing them. Deprecation preserves installability for existing lockfiles while warning users to migrate.
+
+### npmjs classifications
+
+Use these additional labels for published npm modules:
+```
+plain text
+Keep - npm package in use
+Deprecate npm package candidate
+Deprecated npm package
+Manual review - npm package
+```
+### Rule P1 — Already deprecated npm package
+```
+plain text
+npmjs package name is not empty
+AND npm is deprecated = True
+```
+**Classification:** `Deprecated npm package`
+
+The package is already explicitly marked as deprecated on npmjs.
+
+**Recommended action:** Confirm the deprecation message points to the correct replacement, migration path, or explanation.
+
+---
+
+### Rule P2 — Published package with no detected use
+```
+plain text
+npmjs package name is not empty
+AND npm is deprecated is not True
+AND npmjs used by is empty
+AND github dependents is empty
+AND npmjs downloads last year is empty or 0
+```
+**Classification:** `Deprecate npm package candidate`
+
+A published package with no detected local consumers, no GitHub dependents, and no download activity is a strong candidate for npm deprecation.
+
+**Recommended action:** Deprecate with a clear message, especially if the source repository is also stale, archived, or marked as no longer used.
+
+---
+
+### Rule P3 — Stale npm package with weak usage
+```
+plain text
+npmjs package name is not empty
+AND npm is deprecated is not True
+AND npmjs last published older than 24 months
+AND npmjs downloads last year < 100
+AND npmjs used by is empty
+```
+**Classification:** `Deprecate npm package candidate`
+
+The package has not been published recently and has little evidence of current use.
+
+**Recommended action:** Review for replacement package, then deprecate if no owner confirms ongoing use.
+
+---
+
+### Rule P4 — Superseded or obsolete npm package
+```
+plain text
+npmjs package name is not empty
+AND npm is deprecated is not True
+AND (
+  repo name contains old, legacy, deprecated, obsolete, archive, backup
+  OR npmjs package name contains old, legacy, deprecated, obsolete, archive, backup
+)
+```
+**Classification:** `Deprecate npm package candidate`
+
+Package or repository naming suggests the module has been replaced or intentionally retired.
+
+**Recommended action:** Deprecate and include the replacement package name when known.
+
+---
+
+### Rule P5 — npm package backed by archived repository
+```
+plain text
+npmjs package name is not empty
+AND archived = True
+AND npm is deprecated is not True
+```
+**Classification:** `Deprecate npm package candidate`
+
+If the source repository is archived, the npm package is unlikely to receive maintenance.
+
+**Exception:** If the package has significant downloads or known production usage, classify as `Manual review - npm package`.
+
+---
+
+### Rule P6 — npm package has meaningful use
+```
+plain text
+npmjs package name is not empty
+AND (
+  npmjs used by is not empty
+  OR github dependents is not empty
+  OR npmjs downloads last year >= 1000
+)
+```
+**Classification:** `Keep - npm package in use`
+
+The package has evidence of active or historical downstream use.
+
+**Recommended action:** Do not deprecate automatically. If stale, assign an owner, publish a maintenance update, or create a migration plan.
+
+---
+
+### Rule P7 — npm package has low but nonzero usage
+```
+plain text
+npmjs package name is not empty
+AND npm is deprecated is not True
+AND npmjs downloads last year >= 1
+AND npmjs downloads last year < 1000
+AND npmjs used by is empty
+```
+**Classification:** `Manual review - npm package`
+
+Low download counts may represent real users, automated installs, CI, mirrors, or accidental usage.
+
+**Recommended action:** Review package purpose, README, repository status, and replacement availability before deprecating.
+
+---
+
+### Rule P8 — Security-sensitive or build-tool package
+```
+plain text
+npmjs package name is not empty
+AND repo name or npmjs package name contains:
+  auth, login, token, crypto, security, deploy, build, cli, config, eslint, babel, webpack, rollup
+```
+**Classification:** `Manual review - npm package`
+
+Some packages can have outsized impact even with low download counts, especially CLI tools, build tools, authentication utilities, or security-related modules.
+
+**Recommended action:** Require owner/security review before deprecation.
+
+---
+
+### npm deprecation message guidance
+
+When deprecating a package, include a clear message:
+```
+plain text
+This package is no longer maintained. Please migrate to <replacement-package> or contact <team/contact> if you still depend on it.
+```
+If there is no replacement:
+```
+plain text
+This package is no longer maintained and should not be used for new work.
+```
+Avoid unpublishing unless there is a strong security, legal, or accidental-publication reason.
+
+---
+
+
 ## 1. Automatically mark as **Dead**
 
 A repo should be considered **Dead** if any of these are true:
@@ -520,10 +684,14 @@ I’d use these labels in the spreadsheet:
 Active
 Keep - locally used
 Keep - externally used
+Keep - package in use
+Keep - npm package in use
 Stale
 Stale but used
 Stale package
 No longer used candidate
+Deprecate npm package candidate
+Deprecated npm package
 Dead candidate
 Dead - archived
 Dead - deprecated
@@ -560,6 +728,16 @@ For an organization repo cleanup, I would avoid deleting anything immediately. R
 | `Stale package` | Decide whether to publish update, deprecate, or archive |
 | `Manual review` | Ask product/engineering owner |
 | `Active` | Keep |
+
+# npmjs-specific classifications
+
+| Classification | When to use | Recommended action |
+|---|---|---|
+| `Deprecate npm package candidate` | Published npm module has no detected local usage, no GitHub dependents, no meaningful download activity, is stale, archived, obsolete, or likely superseded. | Deprecate the npm package with a clear message. Include a replacement package or migration path when known. |
+| `Deprecated npm package` | Package is already marked as deprecated on npmjs. | Confirm the deprecation message is accurate and points users to the correct replacement, migration path, or explanation. |
+| `Keep - npm package in use` | Package has evidence of use, such as local consumers, GitHub dependents, or significant npm downloads. | Do not deprecate automatically. Assign an owner, maintain it, or create a planned migration if the package is stale. |
+| `Manual review - npm package` | Package has low but nonzero usage, unclear ownership, possible external usage, or security/build-tool relevance. | Require owner, engineering, or security review before deprecating. Check README, repository status, replacement availability, and downstream consumers. |
+| `Needs migration path` | Package should probably be deprecated, but users need a documented replacement or upgrade path first. | Document the replacement, migration steps, and contact path before publishing the npm deprecation notice. |
 
 ---
 

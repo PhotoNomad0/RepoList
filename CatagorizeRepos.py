@@ -21,7 +21,7 @@ NS = {
 }
 
 
-def determine_classification(row):
+def determine_github_classification(row):
     """Classify a repository using repository cleanup rules."""
     repo_name = row.get("repo name", "")
     archived = is_true(row.get("archived"))
@@ -218,6 +218,109 @@ def determine_classification(row):
     return "Needs review", "Repository did not match any automatic classification rule."
 
 
+def determine_npmjs_classification(row):
+    """Classify a published npm module using npmjs lifecycle rules."""
+    repo_name = row.get("repo name", "")
+    npm_package_name = row.get("npmjs package name", "")
+
+    npm_package_empty = is_empty(npm_package_name)
+    npm_deprecated = is_true(row.get("npm is deprecated"))
+    archived = is_true(row.get("archived"))
+
+    npm_used_by_empty = is_empty(row.get("npmjs used by"))
+    github_dependents_empty = is_empty(row.get("github dependents"))
+
+    npm_downloads_last_year = as_int(row.get("npmjs downloads last year"))
+    npm_last_published_months = months_old(row.get("npmjs last published"))
+
+    replacement_terms = ["old", "legacy", "deprecated", "obsolete", "archive", "backup"]
+    sensitive_or_build_terms = [
+        "auth",
+        "login",
+        "token",
+        "crypto",
+        "security",
+        "deploy",
+        "build",
+        "cli",
+        "config",
+        "eslint",
+        "babel",
+        "webpack",
+        "rollup",
+    ]
+
+    if npm_package_empty:
+        return "Needs review", "No npmjs package is published for this repository."
+
+    if npm_deprecated:
+        return "Deprecated npm package", "Npm package is already explicitly marked as deprecated."
+
+    if contains_any(repo_name, sensitive_or_build_terms) or contains_any(npm_package_name, sensitive_or_build_terms):
+        return (
+            "Manual review - npm package",
+            "Package or repository name suggests a security-sensitive, CLI, deployment, configuration, or build-tool package.",
+        )
+
+    if (
+        not npm_used_by_empty
+        or not github_dependents_empty
+        or npm_downloads_last_year >= 1000
+    ):
+        return (
+            "Keep - npm package in use",
+            f"Package has detected local usage, GitHub dependents, or significant npm downloads ({npm_downloads_last_year} downloads in the last year).",
+        )
+
+    if archived:
+        return (
+            "Deprecate npm package candidate",
+            "Package is backed by an archived repository and is not marked deprecated on npmjs.",
+        )
+
+    if (
+        npm_used_by_empty
+        and github_dependents_empty
+        and npm_downloads_last_year == 0
+    ):
+        return (
+            "Deprecate npm package candidate",
+            "Published package has no detected local consumers, no GitHub dependents, and no npm download activity in the last year.",
+        )
+
+    if (
+        npm_last_published_months is not None
+        and npm_last_published_months > 24
+        and npm_downloads_last_year < 100
+        and npm_used_by_empty
+    ):
+        return (
+            "Deprecate npm package candidate",
+            f"Package has not been published in over 24 months ({npm_last_published_months} months ago), has fewer than 100 downloads in the last year ({npm_downloads_last_year}), and has no detected local consumers.",
+        )
+
+    if contains_any(repo_name, replacement_terms) or contains_any(npm_package_name, replacement_terms):
+        return (
+            "Deprecate npm package candidate",
+            "Package or repository name suggests it may be old, legacy, deprecated, obsolete, archived, or a backup.",
+        )
+
+    if (
+        npm_downloads_last_year >= 1
+        and npm_downloads_last_year < 1000
+        and npm_used_by_empty
+    ):
+        return (
+            "Manual review - npm package",
+            f"Package has low but nonzero npm usage ({npm_downloads_last_year} downloads in the last year) and no detected local consumers.",
+        )
+
+    return (
+        "Manual review - npm package",
+        "Published npm package did not match any automatic npm lifecycle classification rule.",
+    )
+
+
 def main():
     headers, data_rows = load_repository_data()
 
@@ -227,11 +330,21 @@ def main():
     if "classification reason" not in headers:
         headers.append("classification reason")
 
+    if "npmjs classification" not in headers:
+        headers.append("npmjs classification")
+
+    if "npmjs classification reason" not in headers:
+        headers.append("npmjs classification reason")
+
     for row in data_rows:
         print(row)
-        classification, classification_reason = determine_classification(row)
+        classification, classification_reason = determine_github_classification(row)
+        npmjs_classification, npmjs_classification_reason = determine_npmjs_classification(row)
+
         row["classification"] = classification
         row["classification reason"] = classification_reason
+        row["npmjs classification"] = npmjs_classification
+        row["npmjs classification reason"] = npmjs_classification_reason
 
     # data_rows = [
     #     row for row in data_rows
