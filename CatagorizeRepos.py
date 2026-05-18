@@ -3,7 +3,7 @@ from lib.utilities import write_rows_to_ods, is_true, months_old, is_empty, as_i
 
 ODS_FILE = "unfoldingword_repos.ods"
 SHEET_NAME = "Repositories"
-CATEGORIZED_OUTPUT_CSV = "categorized_repos.ods"
+CATEGORIZED_OUTPUT = "categorized_repos"
 
 SORT_ORDER = [
     "No longer used candidate",
@@ -13,12 +13,6 @@ SORT_ORDER = [
     "Needs review",
     "Dead - archived",
 ]
-
-NS = {
-    "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
-    "table": "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
-    "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
-}
 
 
 def determine_github_classification(row):
@@ -322,7 +316,7 @@ def determine_npmjs_classification(row):
 
 
 def main():
-    headers, data_rows = load_repository_data()
+    headers, data_rows = load_repository_data(ODS_FILE, SHEET_NAME)
 
     if "classification" not in headers:
         headers.append("classification")
@@ -365,8 +359,8 @@ def main():
     for classification in classifications:
         print(f"- {classification}")
 
-    write_list_to_csv(CATEGORIZED_OUTPUT_CSV, headers, data_rows)
-    write_rows_to_ods("categorized_repos.ods", "Repositories", data_rows)
+    write_list_to_csv(CATEGORIZED_OUTPUT + ".csv", headers, data_rows)
+    write_rows_to_ods(CATEGORIZED_OUTPUT + ".ods", "Repositories", data_rows)
 
 
 if __name__ == "__main__":

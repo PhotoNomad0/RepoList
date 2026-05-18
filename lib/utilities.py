@@ -1,4 +1,5 @@
 import base64
+import csv
 import datetime
 import json
 import os
@@ -9,6 +10,14 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
+import xml.etree.ElementTree as ET
+
+NS = {
+    "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
+    "table": "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
+    "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
+}
 
 def read_ods_sheets(input_file):
     """
@@ -900,7 +909,7 @@ def write_list_to_csv(output_csv, headers, data):
             print(f"Data saved to {output_csv}")
 
 
-def load_repository_data():
+def load_repository_data(ODS_FILE, SHEET_NAME):
     """Load repository rows from the configured ODS sheet and normalize comma-separated values."""
     rows = read_ods_sheet(ODS_FILE, SHEET_NAME)
 
@@ -957,7 +966,7 @@ def parse_date(value):
 
     for date_format in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%SZ", "%m/%d/%Y", "%m/%d/%y"):
         try:
-            return datetime.strptime(value[:19], date_format)
+            return datetime.datetime.strptime(value[:19], date_format)
         except ValueError:
             continue
 
@@ -971,7 +980,7 @@ def months_old(value):
     if date_value is None:
         return None
 
-    today = datetime.today()
+    today = datetime.datetime.today()
     return (today.year - date_value.year) * 12 + today.month - date_value.month
 
 
