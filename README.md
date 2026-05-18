@@ -39,6 +39,7 @@ cp env.sample .env
   - Then edit `.env` and put in your GitHub token.
 
 ## Generate the Repository Spreadsheet
+_Note: This will take a while to run, but only needs to be done once a quarter or so,._
 
 Run:
 ```bash
@@ -49,20 +50,25 @@ This generates an OpenDocument spreadsheet named:
 unfoldingword_repos.ods
 ```
 
-## Export Spreadsheet Sheets to CSV
-
-To split the data in [unfoldingword_repos.ods](unfoldingword_repos.ods) into separate CSV files, run:
-```bash
-python SheetToCSVConverter.py
-```
-
 ## Classify Repositories
 
 To classify every repository by activity and usage status and produce a categorized spreadsheet, run:
 ```bash
 python CatagorizeRepos.py
 ```
-This reads the `Repositories` sheet from `unfoldingword_repos.ods`, applies classification rules, and writes `categorized_repos.ods`. See [ClassificationRules.md](ClassificationRules.md) for the full rule set.
+This reads the `Repositories` sheet from `unfoldingword_repos.ods`, applies classification rules, and writes `categorized_repos.ods`. See [ClassificationRules.md](ClassificationRules.md) for the full rule set.  
+
+### Improving Classification Rules
+If you make changes to the rules, you will need to re-run this script to update the `determine_classification` function and rerun this script to update the `categorized_repos.ods`.
+
+
+## Export Spreadsheet Sheets to CSV
+_Utility function that may be useful for other projects,_
+
+To split the data in [unfoldingword_repos.ods](unfoldingword_repos.ods) into separate CSV files, run:
+```bash
+python SheetToCSVConverter.py
+```
 
 ## Output
 
