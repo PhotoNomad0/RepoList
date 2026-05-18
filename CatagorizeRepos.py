@@ -333,7 +333,12 @@ def main():
     for row in data_rows:
         print(row)
         classification, classification_reason = determine_github_classification(row)
-        npmjs_classification, npmjs_classification_reason = determine_npmjs_classification(row)
+
+        if is_empty(row.get("npmjs package name")):
+            npmjs_classification = ""
+            npmjs_classification_reason = ""
+        else:
+            npmjs_classification, npmjs_classification_reason = determine_npmjs_classification(row)
 
         row["classification"] = classification
         row["classification reason"] = classification_reason
