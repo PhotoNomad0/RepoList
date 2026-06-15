@@ -50,6 +50,12 @@ Repo List Script
 6. Under **Repository access**, choose:
 
 ```plain text
+Public Repositories
+```
+
+or if you want to include private repositories:
+
+```plain text
 All Repositories
 ```
 
