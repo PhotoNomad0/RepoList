@@ -757,8 +757,12 @@ def fetch_package_json(repo):
     Returns:
         dict | None: Parsed package.json content, or None if not found.
     """
-    package_json = fetch_repository_json_file(repo, "package.json")
-    return package_json
+    try:
+        package_json = fetch_repository_json_file(repo, "package.json")
+        return package_json
+
+    except Exception as e:
+        return None
 
 
 def fetch_package_json_files(repo):
