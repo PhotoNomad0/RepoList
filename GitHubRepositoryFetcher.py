@@ -28,6 +28,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+from datetime import datetime
 from xml.sax.saxutils import escape
 
 from lib.utilities import load_env_file, github_request, fetch_repository_dependents, \
@@ -392,6 +393,8 @@ def write_ods(repos, output_file):
 
 
 def main():
+    start_time = datetime.now()
+
     load_env_file(ENV_FILE)
 
     github_token = os.getenv("GITHUB_TOKEN")
@@ -417,6 +420,11 @@ def main():
     print()
     print(f"Created ODS: {OUTPUT_FILE}")
     print(f"Repositories written: {len(repos)}")
+
+    elapsed_time = datetime.now() - start_time
+    hours, remainder = divmod(int(elapsed_time.total_seconds()), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    print(f"Elapsed time: {hours}:{minutes:02d}:{seconds:02d}")
 
 
 if __name__ == "__main__":

@@ -98,6 +98,8 @@ def write_ods_sheets(output_file, sheets):
                 index=False,
             )
 
+    print(f"Data saved to {output_file}")
+
 
 def write_rows_to_ods(output_file, sheet_name, rows):
     """
